@@ -1,6 +1,6 @@
 # Project SecOps — Security Operations Sprint
 
-A comprehensive security operations project documenting the investigation, containment, and remediation of a coordinated cyber attack campaign targeting a fictional organisation. Completed as part of the CyBlack Security Operations Mentorship Programme.
+A comprehensive security operations project documenting the investigation, containment, and remediation of a coordinated cyber attack campaign targeting a fictional organisation. Completed as part of the CyBlack Security Operations Programme.
 
 > **Note:** All organisational details, staff names, email addresses, and log data used in this project are fictional and were provided as part of the CyBlack SecOps Sprint lab environment. The WannaCry malware sample referenced in the malware analysis is a publicly documented threat; no real systems were compromised in this investigation.
 
