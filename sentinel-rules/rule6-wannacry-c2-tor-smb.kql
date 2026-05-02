@@ -1,0 +1,75 @@
+// Rule 6 — WannaCry C2 / Tor Communication / SMB Lateral Movement
+// Severity: Critical | Source: Task 4 — WannaCry Malware Analysis
+// MITRE: T1090 — Proxy | T1021 — Remote Services | T1046 — Network Service Discovery
+// Schedule: Every 15 Minutes | Lookback: 15 Minutes
+// NOTE: Do NOT block www.iuqerfsodp9ifjaposdfjhgosurijfaewrwergwea.com
+//       Resolution of this domain stops WannaCry execution (kill switch)
+
+let WannaCryOnion = dynamic([
+    "c13am4vw2dhxygxeqepohkhsquy6ngaeb94gx7ekbenv2riucmf.onion",
+    "57g7spgrzlojinas.onion",
+    "xxlvbrloxvriy2c5.onion",
+    "76jdd2ir2embyv47.onion",
+    "cwwnhwhlz52maqm7.onion"
+]);
+let TorDNSHits = DeviceNetworkEvents
+| where TimeGenerated > ago(15m)
+| where RemoteUrl has ".onion" or RemoteUrl in (WannaCryOnion)
+| extend DetectionType = "TorOnionC2",
+         AlertDetail = strcat("Tor C2: ", RemoteUrl,
+                   " from ", DeviceName)
+| project TimeGenerated, DeviceName,
+          AccountName = InitiatingProcessAccountName,
+          RemoteUrl, RemoteIP, RemotePort,
+          InitiatingProcessFileName,
+          InitiatingProcessCommandLine,
+          DetectionType, AlertDetail;
+let KillSwitchHits = DeviceNetworkEvents
+| where TimeGenerated > ago(15m)
+| where RemoteUrl has "iuqerfsodp9ifjaposdfjhgosurijfaewrwergwea"
+| extend DetectionType = "WannaCryKillSwitchLookup",
+         AlertDetail = strcat("Kill switch domain queried by ",
+                   DeviceName, " - WannaCry likely active")
+| project TimeGenerated, DeviceName,
+          AccountName = InitiatingProcessAccountName,
+          RemoteUrl, RemoteIP, RemotePort,
+          InitiatingProcessFileName,
+          InitiatingProcessCommandLine,
+          DetectionType, AlertDetail;
+let OnionDNSBroad = DnsEvents
+| where TimeGenerated > ago(15m)
+| where Name endswith ".onion"
+| extend DetectionType = "OnionDNSQuery",
+         AlertDetail = strcat("Tor DNS query: ", Name,
+                   " from ", Computer)
+| project TimeGenerated, DeviceName = Computer,
+          AccountName = "", RemoteUrl = Name,
+          RemoteIP = "", RemotePort = 0,
+          InitiatingProcessFileName = "",
+          InitiatingProcessCommandLine = "",
+          DetectionType, AlertDetail;
+let SMBScanHits = DeviceNetworkEvents
+| where TimeGenerated > ago(15m)
+| where RemotePort == 445 and ActionType == "ConnectionAttempt"
+| summarize SMBCount = count(), UniqueTargets = dcount(RemoteIP),
+            FirstSeen = min(TimeGenerated)
+            by DeviceName, InitiatingProcessFileName,
+               InitiatingProcessAccountName
+| where SMBCount > 20
+| extend TimeGenerated = FirstSeen
+| extend AccountName = InitiatingProcessAccountName
+| extend RemoteUrl = strcat(tostring(SMBCount),
+          " SMB connections to ", tostring(UniqueTargets), " unique IPs")
+| extend RemoteIP = "Multiple", RemotePort = 445
+| extend InitiatingProcessCommandLine = InitiatingProcessFileName
+| extend DetectionType = "EternalBlueSMBScan"
+| extend AlertDetail = strcat("MASS SMB SCAN: ",
+          tostring(SMBCount), " connections from ",
+          DeviceName, " - ISOLATE IMMEDIATELY")
+| project TimeGenerated, DeviceName, AccountName,
+          RemoteUrl, RemoteIP, RemotePort,
+          InitiatingProcessFileName,
+          InitiatingProcessCommandLine,
+          DetectionType, AlertDetail;
+union TorDNSHits, KillSwitchHits, OnionDNSBroad, SMBScanHits
+| order by TimeGenerated desc

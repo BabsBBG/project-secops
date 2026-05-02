@@ -1,0 +1,82 @@
+// Rule 4 — WannaCry File Hash / Process Detection
+// Severity: Critical | Source: Task 4 — WannaCry Malware Analysis
+// MITRE: T1204 — User Execution | T1486 — Data Encrypted for Impact | T1036 — Masquerading
+// Schedule: Every 15 Minutes | Lookback: 15 Minutes
+
+let WannaCryHashes = dynamic([
+    "ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa",
+    "84c82835a5d21bbcf75a61706d8ab549",
+    "5ff465afaabcbf0150d1a3ab2c2e74f3a4426467",
+    "4fef5e34143e646dbf9907c4374276f5"
+]);
+let WannaCryDroppedFiles = dynamic([
+    "@WanaDecryptor@.exe",
+    "@Please_Read_Me@.txt",
+    "taskdl.exe",
+    "taskse.exe",
+    "295021772622446.bat",
+    "m.vbs",
+    "u.wnry",
+    "c.wnry"
+]);
+let SystemToolsAbused = dynamic([
+    "diskpart.exe",
+    "icacls.exe",
+    "attrib.exe",
+    "cscript.exe"
+]);
+let HashHits = DeviceProcessEvents
+| where TimeGenerated > ago(15m)
+| where SHA256 in (WannaCryHashes) or MD5 in (WannaCryHashes)
+| project TimeGenerated, DeviceName, AccountName, FileName,
+          FolderPath, SHA256, MD5, ProcessCommandLine,
+          InitiatingProcessFileName
+| extend DetectionType = "KnownWannaCryHash",
+         AlertDetail = strcat("WannaCry hash: ", FileName,
+                   " on ", DeviceName);
+let DroppedFileHits = DeviceFileEvents
+| where TimeGenerated > ago(15m)
+| where FileName in (WannaCryDroppedFiles) or FileName endswith ".wnry"
+| project TimeGenerated, DeviceName,
+          AccountName = InitiatingProcessAccountName,
+          FileName, FolderPath, SHA256, MD5,
+          ProcessCommandLine = InitiatingProcessCommandLine,
+          InitiatingProcessFileName
+| extend DetectionType = "WannaCryDroppedFile",
+         AlertDetail = strcat("WannaCry file: ", FileName,
+                   " on ", DeviceName);
+let EncryptionHits = DeviceFileEvents
+| where TimeGenerated > ago(15m)
+| where FileName endswith ".WNCRY"
+| summarize EncryptedFileCount = count(),
+            FirstSeen = min(TimeGenerated),
+            LastSeen = max(TimeGenerated)
+            by DeviceName, InitiatingProcessFileName,
+               InitiatingProcessAccountName
+| where EncryptedFileCount > 5
+| extend TimeGenerated = FirstSeen
+| extend AccountName = InitiatingProcessAccountName
+| extend FileName = strcat(tostring(EncryptedFileCount), " .WNCRY files created")
+| extend FolderPath = "Multiple directories"
+| extend SHA256 = "", MD5 = ""
+| extend ProcessCommandLine = InitiatingProcessFileName
+| extend DetectionType = "ActiveWannaCryEncryption"
+| extend AlertDetail = strcat("ACTIVE ENCRYPTION: ",
+          tostring(EncryptedFileCount), " .WNCRY files on ",
+          DeviceName, " - ISOLATE IMMEDIATELY")
+| project TimeGenerated, DeviceName, AccountName, FileName,
+          FolderPath, SHA256, MD5, ProcessCommandLine,
+          InitiatingProcessFileName, DetectionType, AlertDetail;
+let MasqueradingHits = DeviceProcessEvents
+| where TimeGenerated > ago(15m)
+| where FileName in (SystemToolsAbused)
+| where FolderPath !startswith "C:\\Windows\\System32"
+    and FolderPath !startswith "C:\\Windows\\SysWOW64"
+| project TimeGenerated, DeviceName, AccountName, FileName,
+          FolderPath, SHA256, MD5, ProcessCommandLine,
+          InitiatingProcessFileName
+| extend DetectionType = "SystemToolMasquerading",
+         AlertDetail = strcat("Masquerading: ", FileName,
+                   " in ", FolderPath, " on ", DeviceName);
+union HashHits, DroppedFileHits, EncryptionHits, MasqueradingHits
+| order by TimeGenerated desc

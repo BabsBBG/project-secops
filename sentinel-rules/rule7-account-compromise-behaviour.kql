@@ -1,0 +1,105 @@
+// Rule 7 — Account Compromise Behavioural Pattern
+// Severity: Critical | Source: Task 3 — Suspicious Sign-In Investigation
+// MITRE: T1213 — Data from Information Repositories | T1048 — Exfiltration | T1078 — Valid Accounts
+// Schedule: Every 15 Minutes | Lookback: 2 Hours
+// Note: Uses column_ifexists() for OfficeActivity schema compatibility
+
+let SensitiveFileKeywords = dynamic([
+    "payroll", "salary", "vulnerability", "password",
+    "credentials", "financial", "confidential", "hr_",
+    "personal_data", "updated_payroll", "vulnerability_report"
+]);
+let SuspiciousApps = dynamic([
+    "Azure CLI", "Microsoft Azure CLI", "AzureCLI",
+    "Azure Active Directory PowerShell"
+]);
+let MaliciousIPs = dynamic([
+    "79.124.60.6",
+    "150.158.77.170",
+    "124.120.140.202"
+]);
+let SensitiveFileAccess = SigninLogs
+| where TimeGenerated > ago(2h)
+| where ResultType == "0"
+| where tostring(LocationDetails.countryOrRegion) != "GB"
+    or IPAddress in (MaliciousIPs)
+| project LoginTime = TimeGenerated, UserPrincipalName,
+          IPAddress,
+          CountryCode = tostring(LocationDetails.countryOrRegion),
+          AppDisplayName
+| join kind=inner (
+    OfficeActivity
+    | where TimeGenerated > ago(2h)
+    | where Operation in ("FileDownloaded", "FileAccessed",
+              "FileSyncDownloadedFull")
+    | extend FileNameRaw = tostring(
+              column_ifexists("SourceFileName", ""))
+    | extend ObjectIdRaw = tostring(
+              column_ifexists("OfficeObjectId", ""))
+    | where FileNameRaw has_any (SensitiveFileKeywords)
+        or ObjectIdRaw has_any (SensitiveFileKeywords)
+    | project AccessTime = TimeGenerated,
+              UserPrincipalName = tostring(UserId),
+              FileName = FileNameRaw,
+              SiteUrl = tostring(column_ifexists("SiteUrl", "")),
+              Operation
+) on UserPrincipalName
+| where AccessTime > LoginTime
+    and AccessTime < datetime_add("minute", 120, LoginTime)
+| extend TimeDeltaMinutes = datetime_diff("minute",
+          AccessTime, LoginTime)
+| extend DetectionType = "SensitiveFileAccessPostForeignLogin"
+| extend AlertDetail = strcat(
+    "Sensitive file accessed ", tostring(TimeDeltaMinutes),
+    " mins after foreign login by ", UserPrincipalName,
+    " from ", IPAddress, " (", CountryCode, "): ", FileName)
+| project AccessTime, UserPrincipalName, IPAddress,
+          CountryCode, FileName, Operation, SiteUrl,
+          TimeDeltaMinutes, DetectionType, AlertDetail;
+let AdminToolAccess = SigninLogs
+| where TimeGenerated > ago(1h)
+| where ResultType != "0" or IPAddress in (MaliciousIPs)
+    or tostring(LocationDetails.countryOrRegion) != "GB"
+| where AppDisplayName in (SuspiciousApps)
+    or AppDisplayName has "CLI"
+    or AppDisplayName has "PowerShell"
+| extend DetectionType = "AdminToolAccessFromSuspiciousIP"
+| extend AlertDetail = strcat(
+    "Admin tool: ", AppDisplayName, " by ", UserPrincipalName,
+    " from ", IPAddress, " - Status: ",
+    iff(ResultType == "0", "Success", "Failure"))
+| project AccessTime = TimeGenerated, UserPrincipalName,
+          IPAddress,
+          CountryCode = tostring(LocationDetails.countryOrRegion),
+          FileName = AppDisplayName, Operation = "AdminToolAccess",
+          SiteUrl = "", TimeDeltaMinutes = long(0),
+          DetectionType, AlertDetail;
+let ImpossibleTravel = SigninLogs
+| where TimeGenerated > ago(1h)
+| where ResultType == "0"
+| summarize
+    CountriesUsed = make_set(
+        tostring(LocationDetails.countryOrRegion)),
+    IPsUsed = make_set(IPAddress),
+    FirstLogin = min(TimeGenerated),
+    LastLogin = max(TimeGenerated)
+    by UserPrincipalName
+| where array_length(CountriesUsed) > 1
+| extend TimeSpanMinutes = datetime_diff(
+          "minute", LastLogin, FirstLogin)
+| where TimeSpanMinutes < 120
+| extend DetectionType = "ImpossibleTravel"
+| extend AlertDetail = strcat(
+    "Impossible travel: ", UserPrincipalName,
+    " from ", tostring(CountriesUsed),
+    " within ", tostring(TimeSpanMinutes), " minutes")
+| project AccessTime = FirstLogin, UserPrincipalName,
+          IPAddress = tostring(IPsUsed),
+          CountryCode = tostring(CountriesUsed),
+          FileName = strcat("Login from ",
+              tostring(array_length(CountriesUsed)), " countries"),
+          Operation = "ImpossibleTravel", SiteUrl = "",
+          TimeDeltaMinutes = TimeSpanMinutes,
+          DetectionType, AlertDetail;
+union SensitiveFileAccess, AdminToolAccess, ImpossibleTravel
+| order by AccessTime desc

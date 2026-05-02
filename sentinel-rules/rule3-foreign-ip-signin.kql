@@ -1,0 +1,32 @@
+// Rule 3 — Sign-In from Malicious or Foreign IP
+// Severity: Critical | Source: Task 3 — Suspicious Sign-In Investigation
+// MITRE: T1078 — Valid Accounts | T1110 — Brute Force
+// Schedule: Every 15 Minutes | Lookback: 15 Minutes
+
+let MaliciousIPs = dynamic([
+    "79.124.60.6",
+    "150.158.77.170",
+    "124.120.140.202"
+]);
+let AllowedCountries = dynamic([
+    "GB"
+]);
+SigninLogs
+| where TimeGenerated > ago(15m)
+| extend CountryCode = tostring(LocationDetails.countryOrRegion)
+| extend City = tostring(LocationDetails.city)
+| extend IsKnownMalicious = IPAddress in (MaliciousIPs)
+| extend IsForeignLogin = CountryCode !in (AllowedCountries)
+                          and isnotempty(CountryCode)
+| where IsKnownMalicious == true or IsForeignLogin == true
+| project TimeGenerated, UserPrincipalName, UserDisplayName,
+          IPAddress, CountryCode, City, AppDisplayName,
+          ResultType, ResultDescription,
+          RiskLevelDuringSignIn, IsKnownMalicious, IsForeignLogin
+| extend SignInStatus = iff(ResultType == "0", "Success", "Failure")
+| extend AlertDetail = strcat(
+    "Suspicious sign-in by ", UserPrincipalName,
+    " from ", IPAddress, " (", CountryCode, " - ", City, ")",
+    " Status: ", SignInStatus,
+    " Known Malicious: ", IsKnownMalicious)
+| order by TimeGenerated desc

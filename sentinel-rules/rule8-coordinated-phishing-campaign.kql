@@ -1,0 +1,105 @@
+// Rule 8 — Coordinated Phishing Campaign Against Multiple Staff
+// Severity: High | Source: Task 2 — Active Email Threat Investigation
+// MITRE: T1566.001 — Spearphishing Attachment | T1598 — Phishing for Information
+// Schedule: Every 30 Minutes | Lookback: 1 Hour
+// Note: Uses union isfuzzy=true with datatable fallback for IdentityInfo compatibility
+
+let PhishingDomains = dynamic([
+    "wtools.io",
+    "kanzalshamsprojectmgt.com",
+    "updetadobe.blogspot.com",
+    "theannoyingsite.com",
+    "azxmarket.com",
+    "duchessgarden.sn"
+]);
+let KnownSenders = dynamic([
+    "alfredegov@gmail.com",
+    "zelatcol@gmail.com",
+    "projectdept@kanzalshamsprojectmgt.com",
+    "c6d90d50-df87-11ee-a2fc-525400450766@azxmarket.com"
+]);
+let InternalIdentities =
+union isfuzzy=true
+(
+    IdentityInfo
+    | where TimeGenerated > ago(7d)
+    | project InternalDisplayName = tostring(AccountDisplayName),
+              InternalUPN = tostring(AccountUPN)
+),
+(
+    datatable(InternalDisplayName:string, InternalUPN:string)[]
+);
+let MultiTargetDomain = EmailEvents
+| where TimeGenerated > ago(1h)
+| where SenderFromDomain in (PhishingDomains)
+    or SenderFromAddress in (KnownSenders)
+    or SenderMailFromDomain in (PhishingDomains)
+| summarize TargetCount = dcount(RecipientEmailAddress),
+            Targets = make_set(RecipientEmailAddress),
+            Subjects = make_set(Subject),
+            FirstSeen = min(TimeGenerated),
+            LastSeen = max(TimeGenerated)
+            by SenderFromDomain, SenderFromAddress
+| where TargetCount >= 2
+| extend CampaignDuration = datetime_diff("minute", LastSeen, FirstSeen)
+| extend DetectionType = "KnownPhishingDomainMultiTarget"
+| extend AlertDetail = strcat(
+    "Known phishing domain targeting ",
+    tostring(TargetCount), " staff from ", SenderFromAddress)
+| project TimeGenerated = FirstSeen, SenderFromAddress,
+          SenderFromDomain, TargetCount,
+          Targets = tostring(Targets),
+          Subjects = tostring(Subjects),
+          CampaignDuration, DetectionType, AlertDetail;
+let MultiTargetUnknown = EmailEvents
+| where TimeGenerated > ago(1h)
+| where SenderFromDomain !in (
+    "company.com", "microsoft.com", "google.com",
+    "outlook.com", "office365.com", "microsoftonline.com")
+| extend DeliveryActionSafe = tostring(
+          column_ifexists("DeliveryAction", ""))
+| extend AttachmentCountSafe = toint(
+          column_ifexists("AttachmentCount", 0))
+| where DeliveryActionSafe !in ("Blocked", "Quarantined")
+| summarize TargetCount = dcount(RecipientEmailAddress),
+            Targets = make_set(RecipientEmailAddress),
+            Subjects = make_set(Subject),
+            HasAttachment = max(iff(AttachmentCountSafe > 0, 1, 0)),
+            FirstSeen = min(TimeGenerated),
+            LastSeen = max(TimeGenerated)
+            by SenderFromDomain, SenderFromAddress
+| where TargetCount >= 3
+| extend CampaignDuration = datetime_diff("minute", LastSeen, FirstSeen)
+| where CampaignDuration <= 60
+| extend DetectionType = iff(HasAttachment == 1,
+    "NewCampaignWithAttachment", "NewCampaignNoAttachment")
+| extend AlertDetail = strcat(
+    "New campaign: ", tostring(TargetCount),
+    " staff targeted by ", SenderFromAddress,
+    " in ", tostring(CampaignDuration), " minutes")
+| project TimeGenerated = FirstSeen, SenderFromAddress,
+          SenderFromDomain, TargetCount,
+          Targets = tostring(Targets),
+          Subjects = tostring(Subjects),
+          CampaignDuration, DetectionType, AlertDetail;
+let DisplayNameSpoof = EmailEvents
+| where TimeGenerated > ago(1h)
+| where SenderFromDomain !in ("company.com", "microsoft.com")
+| extend SenderDisplayNameSafe = tostring(
+          column_ifexists("SenderDisplayName", ""))
+| join kind=inner (InternalIdentities)
+    on $left.SenderDisplayNameSafe == $right.InternalDisplayName
+| where SenderFromAddress !contains "company.com"
+| extend DetectionType = "DisplayNameSpoofing"
+| extend AlertDetail = strcat(
+    "Display name spoof: ", SenderFromAddress,
+    " using ", SenderDisplayNameSafe,
+    " targeting ", RecipientEmailAddress)
+| project TimeGenerated, SenderFromAddress, SenderFromDomain,
+          TargetCount = long(1),
+          Targets = tostring(RecipientEmailAddress),
+          Subjects = tostring(Subject),
+          CampaignDuration = long(0),
+          DetectionType, AlertDetail;
+union MultiTargetDomain, MultiTargetUnknown, DisplayNameSpoof
+| order by TimeGenerated desc

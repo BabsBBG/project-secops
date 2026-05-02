@@ -1,0 +1,29 @@
+// Rule 1 — Phishing Sender Domain Detected
+// Severity: High | Source: Task 2 — Active Email Threat Investigation
+// MITRE: T1566 — Phishing | T1566.001 — Spearphishing Attachment
+// Schedule: Every 1 Hour | Lookback: 1 Hour
+
+let PhishingDomains = dynamic([
+    "wtools.io",
+    "kanzalshamsprojectmgt.com",
+    "updetadobe.blogspot.com",
+    "theannoyingsite.com",
+    "azxmarket.com",
+    "duchessgarden.sn"
+]);
+let PhishingSenders = dynamic([
+    "alfredegov@gmail.com",
+    "zelatcol@gmail.com",
+    "projectdept@kanzalshamsprojectmgt.com",
+    "c6d90d50-df87-11ee-a2fc-525400450766@azxmarket.com"
+]);
+EmailEvents
+| where TimeGenerated > ago(1h)
+| where SenderFromDomain in (PhishingDomains)
+    or SenderFromAddress in (PhishingSenders)
+    or SenderMailFromDomain in (PhishingDomains)
+| project TimeGenerated, SenderFromAddress, SenderFromDomain,
+          RecipientEmailAddress, Subject, DeliveryAction,
+          DeliveryLocation, ThreatTypes, DetectionMethods
+| extend AlertDetail = strcat("Phishing sender detected: ",
+          SenderFromAddress, " -> ", RecipientEmailAddress)

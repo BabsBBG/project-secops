@@ -1,0 +1,32 @@
+Type,Value,Description,Source Task
+Email,alfredegov@gmail.com,Threat actor confirmed phishing sender,Task 2 - Phishing
+Email,zelatcol@gmail.com,NjRAT delivery sender,Task 2 - Phishing
+Email,projectdept@kanzalshamsprojectmgt.com,Phishing sender,Task 2 - Phishing
+Email,c6d90d50-df87-11ee-a2fc-525400450766@azxmarket.com,WannaCry delivery sender,Task 3 - WannaCry
+Domain,wtools.io,NjRAT malware distribution platform,Task 2 - Phishing
+Domain,kanzalshamsprojectmgt.com,Phishing domain,Task 2 - Phishing
+Domain,updetadobe.blogspot.com,Fake Adobe malware staging page,Task 2 - Phishing
+Domain,theannoyingsite.com,Browser attack toolkit,Task 2 - Phishing
+Domain,azxmarket.com,WannaCry delivery infrastructure,Task 2 - Phishing
+Domain,duchessgarden.sn,WannaCry delivery source,Task 2 - Phishing
+Domain,www.iuqerfsodp9ifjaposdfjhgosurijfaewrwergwea.com,WannaCry kill switch domain (DO NOT BLOCK),Task 3 - WannaCry
+URL,https://wtools.io/paste-code/bOs4,NjRAT payload URL,Task 2 - Phishing
+URL,http://vmi1159541.contaboserver.net/payload.exe,Direct malware download,Task 2 - Phishing
+IP,209.145.51.44,Contabo C2 server IP,Task 2 - Phishing
+IP,79.124.60.6,Bulgarian bulletproof hosting (VenomDC),Task 2 - Account Compromise
+IP,150.158.77.170,Tencent Cloud malicious IP (China),Task 2 - Account Compromise
+IP,124.120.140.202,Thai IP used in attack attempt,Task 2 - Account Compromise
+File Hash SHA256,288b53495ef3fd237fa4640756c096bc8daaa6c6ff4942f6f792b29038ec259e,caffeine.exe suspicious tool,Task 2 - Account Compromise
+Filename,updated_payroll.xlsx,Sensitive payroll data accessed,Task 2 - Account Compromise
+Filename,vulnerability_report_June2023.docx,Sensitive vulnerability report accessed,Task 2 - Account Compromise
+RequestID,Sdfvasdfv-9423-fsafda-asd-sdafsfsadf,Malformed UUID automated tooling indicator,Task 2 - Account Compromise
+File Hash SHA256,ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa,WannaCry primary binary (diskpart.exe),Task 3 - WannaCry
+File Hash MD5,84c82835a5d21bbcf75a61706d8ab549,WannaCry diskpart.exe,Task 3 - WannaCry
+File Hash SHA1,5ff465afaabcbf0150d1a3ab2c2e74f3a4426467,WannaCry diskpart.exe,Task 3 - WannaCry
+File Hash MD5,4fef5e34143e646dbf9907c4374276f5,taskdl.exe encryption worker,Task 3 - WannaCry
+Filename,@WanaDecryptor@.exe,WannaCry ransom UI,Task 3 - WannaCry
+Filename,@Please_Read_Me@.txt,WannaCry ransom note,Task 3 - WannaCry
+Filename,~SDCE9B.tmp,Startup persistence file,Task 3 - WannaCry
+File Extension,*.WNCRY,Encrypted files indicator,Task 3 - WannaCry
+Registry Key,HKLM\SOFTWARE\WannaCrypt,WannaCry infection registry key,Task 3 - WannaCry
+Tor Onion,57g7spgrzlojinas.onion,WannaCry C2 payment server,Task 3 - WannaCry

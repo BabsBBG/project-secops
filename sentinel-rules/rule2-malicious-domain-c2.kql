@@ -1,0 +1,47 @@
+// Rule 2 — Malicious Domain or C2 Contact Detected
+// Severity: Critical | Source: Task 2 — Active Email Threat Investigation
+// MITRE: T1071 — Application Layer Protocol | T1566 — Phishing
+// Schedule: Every 30 Minutes | Lookback: 30 Minutes
+
+let MaliciousDomains = dynamic([
+    "wtools.io",
+    "kanzalshamsprojectmgt.com",
+    "updetadobe.blogspot.com",
+    "theannoyingsite.com",
+    "vmi1159541.contaboserver.net",
+    "azxmarket.com",
+    "duchessgarden.sn"
+]);
+let MaliciousIPs = dynamic([
+    "209.145.51.44"
+]);
+let MaliciousURLs = dynamic([
+    "wtools.io/paste-code/bOs4",
+    "vmi1159541.contaboserver.net/payload.exe"
+]);
+let DefenderHits = DeviceNetworkEvents
+| where TimeGenerated > ago(30m)
+| where RemoteUrl has_any (MaliciousDomains)
+    or RemoteIP in (MaliciousIPs)
+    or RemoteUrl has_any (MaliciousURLs)
+| project TimeGenerated, DeviceName, InitiatingProcessFileName,
+          InitiatingProcessAccountName, RemoteIP, RemoteUrl,
+          RemotePort, ActionType
+| extend Source = "DefenderEndpoint",
+         AlertDetail = strcat("Malicious domain contact: ",
+                   RemoteUrl, " from device: ", DeviceName);
+let ProxyHits = CommonSecurityLog
+| where TimeGenerated > ago(30m)
+| where DestinationHostName has_any (MaliciousDomains)
+    or DestinationIP in (MaliciousIPs)
+    or RequestURL has_any (MaliciousURLs)
+| project TimeGenerated, DeviceName = SourceHostName,
+          InitiatingProcessFileName = ApplicationProtocol,
+          InitiatingProcessAccountName = SourceUserName,
+          RemoteIP = DestinationIP, RemoteUrl = RequestURL,
+          RemotePort = DestinationPort, ActionType = DeviceAction
+| extend Source = "ProxyFirewall",
+         AlertDetail = strcat("Malicious domain contact: ",
+                   RemoteUrl, " from host: ", DeviceName);
+union DefenderHits, ProxyHits
+| order by TimeGenerated desc

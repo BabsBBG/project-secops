@@ -1,0 +1,56 @@
+// Rule 5 — WannaCry Registry Persistence / Shadow Copy Deletion
+// Severity: Critical | Source: Task 4 — WannaCry Malware Analysis
+// MITRE: T1547.001 — Registry Run Keys | T1490 — Inhibit System Recovery | T1070 — Indicator Removal
+// Schedule: Every 15 Minutes | Lookback: 15 Minutes
+
+let RegistryHits = DeviceRegistryEvents
+| where TimeGenerated > ago(15m)
+| where RegistryKey has "WannaCrypt" or RegistryKey has "WannaCry"
+    or (RegistryKey has "CurrentControlSet\\Services"
+        and RegistryValueName has_any ("mssecsvc2.0", "tasksche"))
+| extend DetectionType = "WannaCryRegistryKey"
+| extend AlertDetail = strcat("WannaCry registry: ",
+          RegistryKey, " on ", DeviceName)
+| project TimeGenerated, DeviceName,
+          AccountName = InitiatingProcessAccountName,
+          RegistryKey, RegistryValueName, RegistryValueData,
+          InitiatingProcessFileName, InitiatingProcessCommandLine,
+          DetectionType, AlertDetail;
+let StartupHits = DeviceFileEvents
+| where TimeGenerated > ago(15m)
+| where FolderPath has_any ("Start Menu\\Programs\\Startup",
+          "AppData\\Roaming\\Microsoft\\Windows\\Start Menu")
+| where FileName endswith ".tmp" or FileName endswith ".exe"
+    or FileName endswith ".vbs" or FileName endswith ".bat"
+| where InitiatingProcessFileName !in (
+    "explorer.exe", "setup.exe", "msiexec.exe", "installer.exe")
+| extend DetectionType = "StartupFolderPersistence"
+| extend AlertDetail = strcat("Startup folder write: ",
+          FileName, " by ", InitiatingProcessFileName,
+          " on ", DeviceName)
+| project TimeGenerated, DeviceName,
+          AccountName = InitiatingProcessAccountName,
+          RegistryKey = FolderPath, RegistryValueName = FileName,
+          RegistryValueData = "", InitiatingProcessFileName,
+          InitiatingProcessCommandLine, DetectionType, AlertDetail;
+let VSSHits = DeviceProcessEvents
+| where TimeGenerated > ago(15m)
+| where (FileName =~ "vssadmin.exe"
+         and ProcessCommandLine has_any ("delete", "resize shadowstorage"))
+    or (FileName =~ "wmic.exe"
+        and ProcessCommandLine has_any ("shadowcopy delete"))
+    or (FileName =~ "powershell.exe"
+        and ProcessCommandLine has_any ("Delete-Volume", "Win32_ShadowCopy"))
+    or (FileName =~ "wbadmin.exe"
+        and ProcessCommandLine has "delete")
+| extend DetectionType = "ShadowCopyDeletion"
+| extend AlertDetail = strcat("VSS deletion by ",
+          FileName, " on ", DeviceName,
+          " - RANSOMWARE INDICATOR")
+| project TimeGenerated, DeviceName, AccountName,
+          RegistryKey = "N/A", RegistryValueName = FileName,
+          RegistryValueData = ProcessCommandLine,
+          InitiatingProcessFileName, InitiatingProcessCommandLine,
+          DetectionType, AlertDetail;
+union RegistryHits, StartupHits, VSSHits
+| order by TimeGenerated desc
