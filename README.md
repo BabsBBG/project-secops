@@ -10,11 +10,11 @@ A comprehensive security operations project documenting the investigation, conta
 
 Over the course of this sprint, three interconnected security incidents were identified and investigated — ultimately assessed as a **single coordinated attack campaign** rather than isolated events:
 
-| Incident | Date | Description |
-|---|---|---|
-| Coordinated Phishing Campaign | 29 July 2023 | 5 staff targeted across departments within 90 minutes. 4 confirmed malicious. NjRAT delivery, Google Drive malware, Adobe brand impersonation, display name spoofing. |
-| Account Compromise & Data Exfiltration | 30–31 July 2023 | Financial Analyst credentials compromised. Logins from Bulgarian bulletproof VPS and Chinese Tencent Cloud. Payroll data and internal vulnerability report exfiltrated. |
-| WannaCry Ransomware Delivery | 11 March 2024 | WannaCry binary (diskpart.exe) delivered via RAR attachment to VIP user. Email gateway missed it. EDR caught it. 68/72 VirusTotal detections. Joe's Sandbox score: 100/100. |
+| Incident | Description |
+|---|---|
+| Coordinated Phishing Campaign |  5 staff targeted across departments within 90 minutes. 4 confirmed malicious. NjRAT delivery, Google Drive malware, Adobe brand impersonation, display name spoofing. |
+| Account Compromise & Data Exfiltration | Financial Analyst credentials compromised. Logins from Bulgarian bulletproof VPS and Chinese Tencent Cloud. Payroll data and internal vulnerability report exfiltrated. |
+| WannaCry Ransomware Delivery | WannaCry binary (diskpart.exe) delivered via RAR attachment to VIP user. Email gateway missed it. EDR caught it. 68/72 VirusTotal detections. Joe's Sandbox score: 100/100. |
 
 The exfiltrated vulnerability report from Incident 2 is assessed to have directly informed the attack vector used in Incident 3 — a pattern consistent with **Storm-0978 (RomCom)**, a Russian-linked threat actor known to target finance and government sectors.
 
