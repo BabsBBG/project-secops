@@ -122,7 +122,7 @@ Full team report covering unified incident timeline, MITRE ATT&CK campaign mappi
 
 ## 📁 IOC Reference
 
-All indicators of compromise identified across this project are consolidated in [`iocs/master-ioc-list.csv`](iocs/master-ioc-list.csv).
+All indicators of compromise identified across this project are here in [`iocs/master-ioc-list.csv`](iocs/master-ioc-list.csv).
 
 Categories: Email senders, malicious domains, IP addresses, file hashes, Tor C2 addresses, registry keys, filenames.
 
@@ -134,4 +134,4 @@ Categories: Email senders, malicious domains, IP addresses, file hashes, Tor C2 
 
 ---
 
-*CyBlack Security Operations Sprint | July 2023 — March 2024*
+
