@@ -73,7 +73,7 @@ Risk assessment of 500 Android devices (50% outdated, no MDM). CVE analysis: CVE
 8 custom Microsoft Sentinel analytics rules derived from sprint IOCs. Covers phishing detection, C2 contact, foreign IP sign-in, WannaCry hash/process/registry/network detection, account compromise behavioural pattern, and coordinated campaign detection.
 
 ### [Comprehensive Report](reports/comprehensive-report-overview.pdf)
-Full team report covering unified incident timeline, MITRE ATT&CK campaign mapping, threat actor assessment (Storm-0978 hypothesis), cross-incident correlation analysis, detection gap analysis, prioritised controls recommendations, lessons learned, and recovery next steps.
+Full final report covering unified incident timeline, MITRE ATT&CK campaign mapping, threat actor assessment (Storm-0978 hypothesis), cross-incident correlation analysis, detection gap analysis, prioritised controls recommendations, lessons learned, and recovery next steps.
 
 ---
 
