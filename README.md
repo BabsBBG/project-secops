@@ -6,6 +6,8 @@ A comprehensive security operations project documenting the investigation, conta
 
 ---
 
+Read all about it on my medium https://medium.com/@tobibabalola21/how-i-uncovered-a-coordinated-ransomware-campaign-hidden-across-three-separate-security-incidents-32e2e7b0d623
+
 ##  What This Project Covers
 
 Over the course of this sprint, three interconnected security incidents were identified and investigated — ultimately assessed as a **single coordinated attack campaign** rather than isolated events:
