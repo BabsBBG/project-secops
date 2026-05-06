@@ -6,7 +6,7 @@ A comprehensive security operations project documenting the investigation, conta
 
 ---
 
-## 🎯 What This Project Covers
+##  What This Project Covers
 
 Over the course of this sprint, three interconnected security incidents were identified and investigated — ultimately assessed as a **single coordinated attack campaign** rather than isolated events:
 
@@ -20,7 +20,7 @@ The exfiltrated vulnerability report from Incident 2 is assessed to have directl
 
 ---
 
-## 🗂️ Repository Structure
+##  Repository Structure
 
 ```
 project-secops/
@@ -49,7 +49,7 @@ project-secops/
 
 ---
 
-## 📋 Reports
+##  Reports
 
 ### [Phishing Analysis](reports/active-email-threats-phishing-analysis.pdf)
 Investigation of 5 reported phishing emails using VirusTotal, URLScan.io, and email header analysis. Confirmed NjRAT delivery, Google Drive malware hosting, Adobe brand impersonation with URL masking, and browser-based attack toolkit. Cross-campaign threat actor correlation identified.
@@ -94,7 +94,7 @@ Full final report covering unified incident timeline, MITRE ATT&CK campaign mapp
 
 ---
 
-## 🛠️ Tools Used
+##  Tools Used
 
 | Category | Tools |
 |---|---|
@@ -108,7 +108,7 @@ Full final report covering unified incident timeline, MITRE ATT&CK campaign mapp
 
 ---
 
-## 🧠 Skills Demonstrated
+##  Skills Demonstrated
 
 - **Phishing Investigation** — email header analysis, URL/domain reputation, IOC extraction, campaign correlation
 - **Account Compromise Investigation** — sign-in log analysis, IP geolocation, activity log correlation, data exfiltration detection
@@ -120,7 +120,7 @@ Full final report covering unified incident timeline, MITRE ATT&CK campaign mapp
 
 ---
 
-## 📁 IOC Reference
+##  IOC Reference
 
 All indicators of compromise identified across this project are here in [`iocs/master-ioc-list.csv`](iocs/master-ioc-list.csv).
 
